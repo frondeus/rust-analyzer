@@ -10,11 +10,12 @@ use ra_syntax::{
 };
 
 use crate::{
-    Path, Name, HirDatabase, Function, Resolver,
+    Path, Name, HirDatabase, Function, Resolver, HirFileId,
     name::AsName,
     type_ref::{Mutability, TypeRef},
+    diagnostics::{Diagnostic, Diagnostics},
 };
-use crate::{ path::GenericArgs, ty::primitive::{UintTy, UncertainIntTy, UncertainFloatTy}};
+use crate::{path::GenericArgs, ty::primitive::{UintTy, UncertainIntTy, UncertainFloatTy}};
 
 pub use self::scope::{ExprScopes, ScopesWithSourceMap, ScopeEntryWithSyntax};
 
@@ -55,6 +56,7 @@ pub struct BodySourceMap {
     pat_map: FxHashMap<SyntaxNodePtr, PatId>,
     pat_map_back: ArenaMap<PatId, SyntaxNodePtr>,
     field_map: FxHashMap<(ExprId, usize), AstPtr<ast::NamedField>>,
+    diagnostics: Diagnostics,
 }
 
 impl Body {
@@ -458,6 +460,30 @@ impl Pat {
                 args.iter().map(|f| f.pat).for_each(f);
             }
         }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct NoSuchFieldDiagnostic {
+    file: HirFileId,
+    field: AstPtr<ast::NamedField>,
+}
+
+impl NoSuchFieldDiagnostic {
+    fn new(file: HirFileId, field: &ast::NamedField) -> NoSuchFieldDiagnostic {
+        NoSuchFieldDiagnostic { file, field: AstPtr::new(field) }
+    }
+}
+
+impl Diagnostic for NoSuchFieldDiagnostic {
+    fn file(&self) -> HirFileId {
+        self.file
+    }
+    fn syntax_node(&self) -> SyntaxNodePtr {
+        self.field.into()
+    }
+    fn dyn_eq(&self, other: &dyn Diagnostic) -> bool {
+        self._dyn_eq(other)
     }
 }
 

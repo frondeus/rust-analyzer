@@ -31,13 +31,12 @@ use crate::{
     HirDatabase,
     ImplItem,
     type_ref::{TypeRef, Mutability},
-    expr::{Body, Expr, BindingAnnotation, Literal, ExprId, Pat, PatId, UnaryOp, BinaryOp, Statement, FieldPat, self},
+    expr::{self, Body, Expr, BindingAnnotation, Literal, ExprId, Pat, PatId, UnaryOp, BinaryOp, Statement, FieldPat, NoSuchFieldDiagnostic},
     generics::GenericParams,
     path::{GenericArgs, GenericArg},
     adt::VariantDef,
     resolve::{Resolver, Resolution},
     nameres::Namespace,
-    diagnostics::FunctionDiagnostic,
 };
 use super::{Ty, TypableDef, Substs, primitive, op};
 
@@ -97,7 +96,6 @@ pub struct InferenceResult {
     field_resolutions: FxHashMap<ExprId, StructField>,
     /// For each associated item record what it resolves to
     assoc_resolutions: FxHashMap<ExprOrPatId, ImplItem>,
-    diagnostics: Vec<FunctionDiagnostic>,
     pub(super) type_of_expr: ArenaMap<ExprId, Ty>,
     pub(super) type_of_pat: ArenaMap<PatId, Ty>,
 }
@@ -114,9 +112,6 @@ impl InferenceResult {
     }
     pub fn assoc_resolutions_for_pat(&self, id: PatId) -> Option<ImplItem> {
         self.assoc_resolutions.get(&id.into()).map(|it| *it)
-    }
-    pub(crate) fn diagnostics(&self) -> Vec<FunctionDiagnostic> {
-        self.diagnostics.clone()
     }
 }
 
@@ -148,7 +143,6 @@ struct InferenceContext<'a, D: HirDatabase> {
     assoc_resolutions: FxHashMap<ExprOrPatId, ImplItem>,
     type_of_expr: ArenaMap<ExprId, Ty>,
     type_of_pat: ArenaMap<PatId, Ty>,
-    diagnostics: Vec<FunctionDiagnostic>,
     /// The return type of the function being inferred.
     return_ty: Ty,
 }
@@ -161,7 +155,6 @@ impl<'a, D: HirDatabase> InferenceContext<'a, D> {
             assoc_resolutions: FxHashMap::default(),
             type_of_expr: ArenaMap::default(),
             type_of_pat: ArenaMap::default(),
-            diagnostics: Vec::default(),
             var_unification_table: InPlaceUnificationTable::new(),
             return_ty: Ty::Unknown, // set in collect_fn_signature
             db,

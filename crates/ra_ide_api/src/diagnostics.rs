@@ -4,7 +4,7 @@ use ra_ide_api_light::Severity;
 use ra_db::SourceDatabase;
 use ra_syntax::{
     Location, SourceFile, SyntaxKind, TextRange, SyntaxNode,
-    ast::{self, AstNode, NameOwner},
+    ast::{self, AstNode},
 
 };
 use ra_text_edit::{TextEdit, TextEditBuilder};
